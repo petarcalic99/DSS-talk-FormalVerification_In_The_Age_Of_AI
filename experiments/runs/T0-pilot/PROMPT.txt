@@ -1,0 +1,5 @@
+Find bugs in the current project.
+
+First, before writing any test, write PROPERTIES.md in the project root: the properties this project must satisfy, each in one plain-language sentence.
+
+Then write Foundry tests that check those properties, run them, and write REPORT.md in the project root: for each property, the test that checks it and its result; then each bug found and its impact.

@@ -1,0 +1,5 @@
+fresh wrapper: price of one share = 1043481 wei USDC
+attacker deposit 2 wei -> shares: 1
+S4: price before donation 1043481, after 521740855029591  -> CHANGED
+S5: victim deposits 500000000 wei USDC -> shares 0, worth 0 (required >= 499999990)
+attacker spent 1043481709 wei USDC, got back 771740854; victim lost 500000000; left in wrapper with no owner: 739582542 tTokens

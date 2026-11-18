@@ -4,6 +4,8 @@ Slides from a talk at the **DeFi Security Summit 2026** in Mumbai, held during D
 
 📄 [Slides (PDF)](<Formal Verification in the age of AI - New powers, new traps.pdf>)
 
+🧪 [Experiment runs](experiments/): the agents' properties, tests, CVL specs and reports, plus a simplified version of the vulnerable contract.
+
 ## The question
 
 AI can now write code, tests and formal specifications. If we delegate that work, where is the human still needed? And can formal verification give us justified confidence in AI-produced code?
