@@ -44,6 +44,74 @@ Each agent got the code and one task: find bugs. It had to write plain-language 
 - **Explicit requirements produced better properties, not better impact analysis.** Fair deposit catches any loss, including the small positive-share loss and an insufficient revert-on-zero fix that `shares > 0` passes.
 - **Formal verification did not find more than tests here.** A violation shows a failing state, not the sequence that reaches it. Witnesses can start from states that cannot be reached, and model simplifications and timeouts move reasoning back to the human.
 
+## How to run a similar experiment
+
+The rule that matters most: **the agent under test must never be able to see the answer.** The answer is the bug, the fix, the proof of concept, your reference properties, your predictions and your notes. If any of it is reachable from the run, through the same machine, a parent folder, Git history, a code comment or the web, the run is void.
+
+### 1. Calibrate before any agent runs
+
+- Pick code with a known bug and write a reference fix: V0 (vulnerable) and V1 (fixed).
+- Build a proof of concept on both. Ours confirmed that one victim is only griefing, while two or three victims make the attack profitable, and that V1 stops it.
+- Write the reference properties in plain language, then tests and a few formal rules. Each one should fail on V0 and pass on V1, or you should know why it doesn't.
+- Watch for assumptions that hide the bug. One of our calibration assumptions made the fair-deposit proof pass on V0 too.
+- Write down your predictions before the first run.
+
+### 2. Separate roles and locations
+
+| Location | Contains | Visible to the agent? |
+|---|---|---|
+| Research notes | hypotheses, attack mechanics, predictions | Never |
+| Private control repo | the evaluation project (V0, V1, PoC, reference tests and rules), prompts, results, scoring | Never |
+| Template repo | V0 plus dependencies and a neutral deployment helper; no tests, no fix, no hints | Only as a copy |
+| Run session | one fresh source copy, plus that condition's prompt and README | Yes, and nothing else |
+
+```mermaid
+flowchart LR
+  E[control repo: evaluation] -- "generate script" --> T[template repo]
+  T -- "source snapshot, no .git" --> S[fresh run session]
+  P[control repo: frozen prompt + README] -- "given by the human" --> S
+  S -- "exported artifacts" --> R[control repo: results and scoring]
+```
+
+- **Orchestrator agent:** knows the answer. It builds the evaluation, generates the template, drafts prompts and READMEs, and reviews results. It is never tested, and no run happens in its session.
+- **Human reviewer and launcher:** reviews the template and inputs, starts every run, checks isolation, and exports the artifacts.
+- **Agent under test:** gets only the source copy, the prompt and the README for its condition.
+
+Before using the template, check it for leaks: grep for anything that hints at the bug, then read it through.
+
+### 3. Freeze the inputs
+
+- Write one prompt per method (tests or formal verification) and one README per documentation level. Write each once, before any run, and record their hashes.
+- Every run of a condition gets identical input. Any change creates a new version, and results from different versions are not mixed.
+- Never give an agent earlier results or improvised hints. Label any follow-up a human directs as such: F0's profitable-attack report came from one.
+- Ask the agent to quote its inputs. Every report should include a "Run inputs" section with the full prompt, the supplied docs (or "None"), the condition, the version, the template commit, the model and the duration.
+
+### 4. Isolate every run
+
+- **One disposable session per run, never reused.** Use a source snapshot with no `.git`, no history and no earlier artifacts.
+- **No shared repositories.** Provide no Git credentials, repository connectors, access to other sessions, or web access. No commits, pushes or pull requests.
+- **No prover key.** Formal-verification agents only compile their specs. You run the selected rules yourself and feed back the results.
+- **Record the isolation check.** The human writes down an isolation verdict for every run. A missing verdict is not a pass.
+
+### 5. Keep the environment real and the prover budget small
+
+- **Use the real dependencies, not mocks.** Choosing what to simplify is part of what you measure in the agent. We substituted only a standard ERC-20 for the chain's native USDC.
+- **Test first.** Calibrate every property in Foundry before writing CVL. Compile locally with `--compilation_steps_only` before submitting a job.
+- **Small jobs.** One rule per job, V0 first (a counterexample should come quickly), then V1. Log every job.
+
+### 6. Export and score
+
+- Export the properties, tests or specs, configuration, report and any logs. Store them unchanged, apart from your evaluation.
+- Run the agent's checks against both V0 and V1.
+- Then review by hand:
+  - Does each property state the real guarantee, or only a symptom?
+  - Does each check match its property?
+  - Do any assumptions hide the bug?
+  - Are the counterexamples reachable?
+  - Is the economic impact right?
+- Keep what the agent reported separate from what you reproduced.
+- **Pilot first.** Our first pilot showed that we needed source-copy isolation and prompt capture, so we added both before the later runs.
+
 ## Notes on the files
 
 - Files keep their original content. Markdown reports were renamed from `.md.txt` back to `.md`.
