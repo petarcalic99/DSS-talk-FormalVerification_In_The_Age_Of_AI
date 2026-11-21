@@ -2,6 +2,8 @@
 
 Slides and experiments from a talk at the **DeFi Security Summit 2026** in Mumbai, held during Devcon week in November 2026. Speaker: Petar Calic, Protocol Lead at Spectra.
 
+🎥 [Talk recording (YouTube)](https://youtu.be/LFOlyW6mx4M)
+
 📄 [Slides (PDF)](<Formal Verification in the age of AI - New powers, new traps.pdf>)
 
 🧪 [Experiments](experiments/): one folder per experiment. The talk's experiment is [inflation-vulnerability](experiments/inflation-vulnerability/): the agents' properties, tests, CVL specs and reports, plus a simplified version of the vulnerable contract.
