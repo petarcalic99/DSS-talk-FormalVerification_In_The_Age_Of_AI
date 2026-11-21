@@ -25,7 +25,13 @@ Each agent got the code and one task: find bugs. It had to write plain-language 
 
 \* T0-pilot was the first Foundry pilot. Its documentation level was not recorded; its prompt is in [`PROMPT.txt`](runs/T0-pilot/PROMPT.txt).
 
-**Isolation.** An orchestrator agent prepared the inputs and evaluated the results; it knew the answer. A human launched each run and checked isolation. Every run was a fresh cloud session with its own copy of the source and no Git history, other repositories, earlier sessions or web browsing. Network access was used only for allowed sources: package registries and toolchain downloads (Foundry, the Certora CLI, solc and the locked dependencies). Certora runs started with compilation only. Selected prover jobs were then run and their results fed back to the agent.
+**Isolation was built into the setup.** An orchestrator agent prepared the inputs and evaluated the results; it knew the answer, so no run took place in its session. A human launched every run in its own new cloud session with limited access. Each session had:
+
+- one copy of the source, without Git history, remotes or earlier results;
+- no repositories attached, and no Git credentials, repository connectors or access to other sessions;
+- network access only to package registries and toolchain downloads (Foundry, the Certora CLI, solc and the locked dependencies), and no web browsing.
+
+The agent under test could reach only its source copy, its prompt and its README. Certora runs started with compilation only. Selected prover jobs were then run and their results fed back to the agent.
 
 **Fair deposit**, the key requirement supplied at L2, says: immediately after depositing `a` assets, the shares received are worth at least `a − 10` base units according to `previewRedeem`.
 
@@ -97,7 +103,7 @@ Before using the template, check it for leaks: grep for anything that hints at t
 - **One disposable session per run, never reused.** Use a source snapshot with no `.git`, no history and no earlier artifacts.
 - **No shared repositories.** Provide no Git credentials, repository connectors, access to other sessions, or web access. No commits, pushes or pull requests.
 - **No prover key.** Formal-verification agents only compile their specs. You run the selected rules yourself and feed back the results.
-- **Record the isolation check.** The human writes down an isolation verdict for every run. A missing verdict is not a pass.
+- **Enforce isolation with the environment, then record it.** Set the run environment's access limits so the answer can't be reached, rather than relying on the agent to obey instructions. Note for every run which environment it used and that it was checked.
 
 ### 5. Keep the environment real and the prover budget small
 

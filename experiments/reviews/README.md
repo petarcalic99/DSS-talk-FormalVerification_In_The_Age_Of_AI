@@ -4,6 +4,8 @@ These are the orchestrator's review notes from the research behind the talk, kep
 
 The notes were written during the research, as each run came in, between 2026-10-25 and 2026-10-31. Earlier notes can describe evidence as missing or pending when a later note covers it, so read them with their dates. They were copied from the private research repository. Links to private material (the evaluation project, the template, prover jobs and sessions) were removed, and file links now point to this folder.
 
+**On isolation.** Some notes say a run's isolation verdict was "not recorded", "unconfirmed" or "pending". That means only that the orchestrator had no written verdict in its own records when it wrote the note. It does not mean isolation failed or went unchecked. Isolation was built into the setup: every run took place in its own cloud session with limited access, as described in the [experiments README](../README.md#setup).
+
 ## Start here
 
 - [Final findings](final-findings.md): the overall conclusions. Agents proposed a relevant fix (internal accounting) before they understood the profitable attack. The note also covers which fixes address which guarantees, and what each hypothesis does and does not support.
