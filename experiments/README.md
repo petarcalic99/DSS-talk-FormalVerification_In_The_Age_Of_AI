@@ -2,7 +2,9 @@
 
 This folder contains what the agents actually produced in the experiments behind the talk: their property lists, Foundry tests, Certora CVL specifications, harnesses, models and reports. It also contains a simplified version of the vulnerable contract.
 
-> **This is an archive of runs, not a reproducible project.** The agents worked on the real `SpectraWrappedTakara` codebase, which is not included here. Their tests and specs import that code, so they will not compile from this folder alone. Results are as the agents reported them unless stated otherwise.
+> **This is an archive of runs, not a reproducible project.** The agents worked on the real `SpectraWrappedTakara` codebase, which is not included here. The contract in this folder is a different, simplified version, so the agents' tests and specs will not compile against it. Results are as the agents reported them unless stated otherwise.
+>
+> **Use it as a worked example.** The files show what was done: how properties were written, how they became tests and CVL rules, and where the agents' reasoning went right or wrong. To apply the method to your own contracts, point Claude (or another coding agent) at this folder, ask it to extract the technique, and have it follow the same steps on your code.
 
 ## The target
 
@@ -23,7 +25,7 @@ Each agent got the code and one task: find bugs. It had to write plain-language 
 
 \* T0-pilot was the first Foundry pilot. Its documentation level was not recorded; its prompt is in [`PROMPT.txt`](runs/T0-pilot/PROMPT.txt).
 
-**Isolation.** An orchestrator agent prepared the inputs and evaluated the results; it knew the answer. A human launched each run and checked isolation. Every run was a fresh cloud session with its own copy of the source and no Git history, other repositories, earlier sessions or web access. Certora runs started with compilation only. Selected prover jobs were then run and their results fed back to the agent.
+**Isolation.** An orchestrator agent prepared the inputs and evaluated the results; it knew the answer. A human launched each run and checked isolation. Every run was a fresh cloud session with its own copy of the source and no Git history, other repositories, earlier sessions or web browsing. Network access was used only for allowed sources: package registries and toolchain downloads (Foundry, the Certora CLI, solc and the locked dependencies). Certora runs started with compilation only. Selected prover jobs were then run and their results fed back to the agent.
 
 **Fair deposit**, the key requirement supplied at L2, says: immediately after depositing `a` assets, the shares received are worth at least `a − 10` base units according to `previewRedeem`.
 
@@ -33,7 +35,7 @@ Each agent got the code and one task: find bugs. It had to write plain-language 
 |---|---|---|
 | **T0-pilot** | Saw that a donation can give a victim zero shares, then called the attack griefing. Its fuzz test runs one victim, asserts the attacker never profits, and never checks the victim's loss. Its invariant handlers include no donation. Reported 19 tests: 16 pass, 3 fail. | properties, report, tests |
 | **T1** | Inferred a `shares > 0` property. A test with a donation showed a 10,000 USDC deposit minting zero shares, so the bug was caught as a symptom. Attacker profit was not established. | properties, report, tests |
-| **T2** | Translated fair deposit into `previewRedeem(shares) + 10 >= assets`. This also caught a 1,000 USDC deposit that received shares but lost about 350 micro-USDC (358 in the initial report, 349 in the summary). The one-victim exploit test led it to call the attack griefing. Reported 44 tests: 34 pass, 10 fail. | properties, initial report, summary, tests, fixture |
+| **T2** | Translated fair deposit into `previewRedeem(shares) + 10 >= assets`. This also caught a 1,000 USDC deposit that received shares but lost about 350 micro-USDC. The one-victim exploit test led it to call the attack griefing. Forge was not available at first, so the initial report gives predicted results from a Python simulation (358 micro-USDC lost). The summary comes from a later executed run (forge 1.7.1): 44 tests, 34 pass, 10 fail, 349 micro-USDC lost. The archived tests are the final versions from that run. | properties, initial report, summary, tests, fixture |
 | **F0** | Its rule `P8_noZeroShareDeposit` was violated by a 7,939-unit deposit minting zero shares. The trace showed no donation and no victims, and the agent stopped at a rounding bug. In two human-directed follow-ups (`P8_FOLLOWUP.md`, `P8_EXPLOIT_REPORT.md`), it showed a two-victim theft by concrete execution: 1,000 USDC becomes 1,110.05. It also tested fix variants: offset 6 removed the attack, while reverting on zero shares was not enough (the attacker still gains 122.98 USDC with four victims). The full profit rule timed out. | properties, report, CVL, config, harness, fix variants, follow-ups |
 | **F1** | None of its 20 properties protects deposit value. It called the attack unprofitable. Only its tToken model survives; the original report and spec are not available. | tToken mock |
 | **F2** | Wrote a `fairDeposit` rule matching the requirement. The first submission was compile-only. Its Python proof of concept shows a 500 USDC deposit getting zero shares, and it concluded griefing. A later follow-up ran four prover jobs after model repairs: fair deposit and donation neutrality fail, and supply consistency verifies. One reported witness starts from a state that cannot be reached from an empty wrapper (999,999 shares with zero value). | properties, report, CVL, config, harness, tToken model, PoC, follow-up |
@@ -116,6 +118,6 @@ Before using the template, check it for leaks: grep for anything that hints at t
 
 - Files keep their original content. Markdown reports were renamed from `.md.txt` back to `.md`.
 - Certora job links were replaced with `[Certora job link removed]`. The `BUSL-1.1` headers in agent-written test files come from the original project's template.
-- Left out: the original contract, the F0 patch that made its private helpers `internal` for the harness, F1's report and spec, F2's revised CVL, and raw prover traces.
+- Left out: the original contract, the F0 patch that made its private helpers `internal` for the harness, F0's original finding (`P8_FINDING.md`), F0's later CVL rules (`P8a`–`P8d`, `C1`/`C2`, `L0`–`L3`) and its exploit scripts, T2's final full report (`REPORT_T02.md`), F1's report and spec, F2's revised CVL, and raw prover traces. Some reports refer to these files by name.
 - Test counts and prover outcomes are as reported by the agents or the follow-up reports. F2's Python proof of concept is the only artifact that was independently re-run (its output is in `reviewer-poc-output.txt`).
 - These are exploratory pilots, one run per condition. They support qualitative conclusions, not success rates or a ranking of tools or models.
