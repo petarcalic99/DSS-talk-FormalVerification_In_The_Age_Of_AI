@@ -2,17 +2,15 @@
 pragma solidity ^0.8.20;
 
 import {ModuleAuth} from "./ModuleAuth.sol";
-import {Vault} from "./Vault.sol";
 
 /// @title TimelockModule
-/// @notice Enabled modules queue transactions for the vault. After `cooldown`
-///         seconds anyone can execute them, in order. The owner can cancel
-///         queued transactions before they run.
+/// @notice Enabled modules queue transactions. After `cooldown` seconds anyone
+///         can execute them, in order. The owner can cancel queued transactions
+///         before they run. The module executes the queued call itself.
 contract TimelockModule is ModuleAuth {
     bytes32 public constant MODULE_TX_TYPEHASH =
         keccak256("ModuleTx(address to,uint256 value,bytes data,uint256 salt)");
 
-    Vault public immutable vault;
     uint256 public immutable cooldown;
 
     /// @notice Index of the next transaction to execute.
@@ -31,10 +29,11 @@ contract TimelockModule is ModuleAuth {
     error ExecutionFailed();
     error InvalidNonce();
 
-    constructor(address _owner, Vault _vault, uint256 _cooldown) ModuleAuth(_owner) {
-        vault = _vault;
+    constructor(address _owner, uint256 _cooldown) ModuleAuth(_owner) {
         cooldown = _cooldown;
     }
+
+    receive() external payable {}
 
     /// @notice Called by an enabled module to queue a transaction.
     function execTransactionFromModule(address to, uint256 value, bytes calldata data) external moduleOnly {
@@ -61,7 +60,8 @@ contract TimelockModule is ModuleAuth {
         if (txHash[index] != getTransactionHash(to, value, data)) revert WrongTransaction();
 
         txNonce = index + 1;
-        if (!vault.execTransactionFromModule(to, value, data)) revert ExecutionFailed();
+        (bool ok,) = to.call{value: value}(data);
+        if (!ok) revert ExecutionFailed();
         emit TransactionExecuted(index);
     }
 
