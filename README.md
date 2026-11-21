@@ -4,9 +4,9 @@ Slides from a talk at the **DeFi Security Summit 2026** in Mumbai, held during D
 
 📄 [Slides (PDF)](<Formal Verification in the age of AI - New powers, new traps.pdf>)
 
-🧪 [Experiment runs](experiments/): the agents' properties, tests, CVL specs and reports, plus a simplified version of the vulnerable contract.
+🧪 [Experiments](experiments/): one folder per experiment. The talk's experiment is [inflation-vulnerability](experiments/inflation-vulnerability/): the agents' properties, tests, CVL specs and reports, plus a simplified version of the vulnerable contract.
 
-🔍 [Reviewer notes](experiments/reviews/): the per-run reviews, the findings log and the final findings.
+🔍 [Reviewer notes](experiments/inflation-vulnerability/reviews/): the per-run reviews, the findings log and the final findings.
 
 ## The question
 
