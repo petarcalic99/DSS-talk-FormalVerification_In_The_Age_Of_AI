@@ -5,7 +5,7 @@ Each folder is one experiment: can AI agents find a known vulnerability with tes
 | Experiment | Vulnerability | Contents |
 |---|---|---|
 | [inflation-vulnerability](inflation-vulnerability/) | ERC-4626 donation/inflation attack in a wrapper vault (the experiment behind the DSS 2026 talk) | 6 agent runs (Foundry and Certora, 3 documentation levels), reviewer notes, simplified contract |
-| [experiment-2-signature-validation](experiment-2-signature-validation/) | A module-permissioned delay accepts a forged ERC-1271 authorization (modelled on the June 2026 Zodiac/Gnosis Pay exploit) | The authorization-core contracts |
+| [experiment-2-signature-validation](experiment-2-signature-validation/) | A module-permissioned delay accepts a forged ERC-1271 authorization | The authorization-core contracts |
 
 ## Experiment 2: signature-validation
 
