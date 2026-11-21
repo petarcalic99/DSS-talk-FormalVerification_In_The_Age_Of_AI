@@ -40,6 +40,10 @@ Each agent got the code and one task: find bugs. It had to write plain-language 
 | **F1** | None of its 20 properties protects deposit value. It called the attack unprofitable. Only its tToken model survives; the original report and spec are not available. | tToken mock |
 | **F2** | Wrote a `fairDeposit` rule matching the requirement. The first submission was compile-only. Its Python proof of concept shows a 500 USDC deposit getting zero shares, and it concluded griefing. A later follow-up ran four prover jobs after model repairs: fair deposit and donation neutrality fail, and supply consistency verifies. One reported witness starts from a state that cannot be reached from an empty wrapper (999,999 shares with zero value). | properties, report, CVL, config, harness, tToken model, PoC, follow-up |
 
+## Reviewer notes
+
+The orchestrator reviewed every run as it came in. Its notes are in [`reviews/`](reviews): one per run, cross-run comparisons, a dated findings log (including the calibration on V0 and V1), and the [final findings](reviews/final-findings.md). They keep what each agent reported apart from what the reviewer checked.
+
 ## What it shows
 
 - **No agent found the profitable attack on its own.** All six saw the donation mechanism and victim loss. Every initial report either called it griefing or unprofitable from a one-victim example, or did not assess profit. The multi-victim theft appeared only after a human challenged F0's no-profit claim.
@@ -116,7 +120,7 @@ Before using the template, check it for leaks: grep for anything that hints at t
 
 ## Notes on the files
 
-- Files keep their original content. Markdown reports were renamed from `.md.txt` back to `.md`.
+- Run files keep their original content. The reviewer notes in `reviews/` had their metadata header removed and their links changed, and nothing else. Markdown reports were renamed from `.md.txt` back to `.md`.
 - Certora job links were replaced with `[Certora job link removed]`. `F0/P8_followup_rules.spec` is an excerpt of F0's final spec and is not standalone. The `BUSL-1.1` headers in agent-written test files come from the original project's template.
 - Left out: the original contract, the F0 patch that made its private helpers `internal` for the harness, F0's original finding (`P8_FINDING.md`), F0's later CVL rules other than P8a–P8d (`C1`/`C2`, `L0`–`L3`) and its exploit scripts, T2's report as updated after the executed run (`REPORT-initial.md` is `REPORT_T02.md` before the tests were run), F1's report and spec, F2's revised CVL, and raw prover traces. Some reports refer to these files by name.
 - Test counts and prover outcomes are as reported by the agents or the follow-up reports. F2's Python proof of concept is the only artifact that was independently re-run (its output is in `reviewer-poc-output.txt`).

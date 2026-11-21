@@ -6,6 +6,8 @@ Slides from a talk at the **DeFi Security Summit 2026** in Mumbai, held during D
 
 🧪 [Experiment runs](experiments/): the agents' properties, tests, CVL specs and reports, plus a simplified version of the vulnerable contract.
 
+🔍 [Reviewer notes](experiments/reviews/): the per-run reviews, the findings log and the final findings.
+
 ## The question
 
 AI can now write code, tests and formal specifications. If we delegate that work, where is the human still needed? And can formal verification give us justified confidence in AI-produced code?
