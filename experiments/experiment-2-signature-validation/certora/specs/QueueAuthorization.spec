@@ -17,13 +17,14 @@ methods {
     function moduleTxStructHash(address, uint256, bytes, uint256) external returns (bytes32) envfree;
     function module.approved(bytes32) external returns (bool) envfree;
 
-    // The low-level staticcall in SignatureChecker goes to the module.
-    function _.isValidSignature(bytes32, bytes) external => DISPATCHER(true);
+    function signerModel() external returns (address) envfree;
 }
 
 rule signedQueueRequiresModuleApproval(env e, address to, uint256 value, bytes data, uint256 salt, bytes tail) {
     // The module is enabled.
     require isModuleEnabled(module);
+    // The harness sends every contract signature to the model wallet.
+    require signerModel() == module;
     // Stay on the contract-signature path: a 65-byte signature is first tried
     // as an EOA signature with ecrecover.
     require tail.length != 45;
@@ -32,7 +33,7 @@ rule signedQueueRequiresModuleApproval(env e, address to, uint256 value, bytes d
     bool moduleApproved = module.approved(digest);
     uint256 queuedBefore = queueNonce();
 
-    relayContractSignature(e, to, value, data, salt, module, tail);
+    relayContractSignature(e, to, value, data, salt, tail);
 
     assert queueNonce() != queuedBefore => moduleApproved,
         "a transaction was queued that the module never approved";

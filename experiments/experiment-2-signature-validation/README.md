@@ -52,13 +52,16 @@ Neither point requires knowing about the bug.
 - The fuzzer must choose to revert *and* get the first 4 bytes exactly right: about 1 chance in 8 billion per input.
 - Two other suites passed on the vulnerable code: an earlier 22-test permission suite, and the "random signature" fuzz tests in this file.
 
-**With formal verification, the solver should compute the input instead of guessing it.**
-- A prover typically treats a call to an unknown contract as able to return or revert with any data.
-- Given the property and an unconstrained signer, it should produce revert data starting with `0x1626ba7e`, because that's what reaching the queue requires.
-- *This is a prediction, and it has not held up so far.* In our first prover runs, every way we modelled the signer call either hid the bug or also failed on the fixed code. See [certora/README.md](certora/README.md).
+**With formal verification, the solver computed the input instead of guessing it.**
+- The Certora rule in [certora/](certora/) states the property: if a transaction is queued through a module's signature, the module approved it.
+- The signer model only says: "when the module hasn't approved, it may return any non-approval value or revert with any bytes".
+- The prover found the attack by itself: it chose revert data starting with `0x1626ba7e`. The rule is violated on the current code and verified with the fix.
 
-**What remains for the engineer with formal verification:**
-- **Don't model the attacker away.** Summarising the signer as honest, or as "returns the magic value or reverts empty", to avoid a timeout hides the bug.
-- **Read the counterexample.** "A contract reverts with the magic value as its data" has to be recognised as realistic: anyone can deploy such a contract.
+**But it only worked after getting the model of the signer call right**, and each wrong choice either hid the bug or produced false alarms (details in [certora/README.md](certora/README.md)):
+- **Routing the call to the model.** Certora's usual summary (`DISPATCHER`) hid the bug. With no summary, the call could return anything, so the rule also failed on the fixed code. We had to hard-code the signer's address (one munged line, outside the buggy function).
+- **Revert data of variable length.** The prover lost track of it and missed the bug, so the model reverts with exactly 32 bytes.
+- **Our own spec mistakes**, which produced a violation that wasn't the bug: an `envfree` declaration that let the chain ID differ, and assembly the prover modelled imprecisely.
 
-**Conclusion:** for this bug, formal verification moves the expertise needed. With tests and fuzzing, the engineer has to **imagine the attack**. With formal verification, they have to **not model it away and recognise it in the counterexample**. The property itself can stay at a high level.
+To get there, we had to check that the model keeps one specific behaviour: a failed call hands its revert data back to the caller. Knowing which behaviour to check is close to knowing the bug.
+
+**Conclusion:** the property can stay at a high level, and for this bug the prover does what fuzzing can't: it computes the 4 bytes nobody told it about. The expertise doesn't disappear, though. With tests and fuzzing, the engineer has to **imagine the attack**. With formal verification, they have to **build a model that keeps the attack possible**, and recognise false alarms and silent passes along the way.

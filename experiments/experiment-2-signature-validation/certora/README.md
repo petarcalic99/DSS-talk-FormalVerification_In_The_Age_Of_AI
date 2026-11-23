@@ -1,6 +1,15 @@
-# Certora setup (work in progress)
+# Certora setup
 
-**Status: the rule does not catch the bug yet.** Every way we modelled the signer call either hid the bug or also failed on the fixed code.
+**Status: the rule catches the bug.** It is violated on the current code and verified with the one-line fix. Every violation is the attack: the module reverts with data starting with `0x1626ba7e`. The prover chose those bytes itself; nothing in the spec or the harness mentions them.
+
+## Run
+
+From the experiment folder (needs `CERTORAKEY` and `solc-0.8.24` on the PATH):
+
+```
+certora/munge.sh
+certoraRun certora/conf/QueueAuthorization.conf
+```
 
 ## The rule
 
@@ -9,40 +18,34 @@
 > If a transaction is queued through an enabled module's signature, the module really approved that transaction.
 
 - `harness/ModuleSigner.sol` models the enabled module, a contract wallet.
-  - `approved` is the ground truth: the hashes the module really approved.
-  - For any other hash, the prover chooses how `isValidSignature` answers: return any value except the magic value, or revert with any data of up to 32 bytes.
-- `harness/TimelockHarness.sol` adds one helper to relay `signer || tail`, because CVL can't concatenate bytes.
+  - `approved` is the ground truth: the hashes it really approved.
+  - For any other hash, the prover chooses how `isValidSignature` answers: return any value except the magic value, or revert with any 32 bytes.
+- `harness/TimelockHarness.sol` routes every contract signature to that model, and relays `signer || tail`, because CVL can't concatenate bytes.
+- `munge.sh` copies `src/` to `munged/` (git-ignored) and changes one line, explained below.
 
-Nothing in the spec or the harness describes the attack. The prover would have to find it.
+## What it took: three modelling choices
 
-Run it from the experiment folder (needs `CERTORAKEY` and `solc-0.8.24` on the PATH):
+The property didn't change. What changed was how the call to the signer is modelled. Each wrong choice made the prover either miss the bug or raise false alarms.
 
-```
-certoraRun certora/conf/QueueAuthorization.conf
-```
+1. **Routing the call: hard-code the signer's address.**
+   - `SignatureChecker` slices the signer's address out of the signature bytes. The prover can't follow an address taken from symbolic bytes, so the call stays unresolved.
+   - The usual fixes failed:
+     - With a summary (`DISPATCHER`), a reverting signer never led to a queued transaction, so the bug was hidden.
+     - With no summary or `NONDET`, the call returned anything, so the rule also failed on the fixed code.
+   - The fix: `munge.sh` makes `SignatureChecker` read the address through a virtual function, and the harness returns the linked model.
+   - The function where the bug is, `_isValidContractSignature`, is not touched.
+2. **Revert data length: fixed at 32 bytes.**
+   - With a prover-chosen length, the prover lost track of the revert data and the rule passed on the vulnerable code.
+3. **No fallback.**
+   - Certora doesn't run a callee's `fallback` by default (`optimistic_fallback`). The model therefore uses a named `isValidSignature`.
 
-## What we observed
+## Certora behaviour we confirmed
 
-`SignatureChecker` calls the module with a low-level `staticcall`, to an address read from the signature bytes. The prover can't resolve that call by itself, so it has to be modelled. Each of the four options we tried got the revert data wrong:
+- **When a call is resolved to a contract in the scene, revert data is modelled correctly.** We checked this with a separate 10-line contract: the caller sees `success = false` and the exact revert bytes.
+- **The documentation doesn't say how revert data is handled.** It is silent for both resolved and summarized calls. CVL call hooks expose the return code, but can't read return data.
+- **The documentation says `DISPATCHER` should behave like a normal call.** What we observed (a reverting dispatched call never leading to a queued transaction) doesn't match that. It may be worth reporting to Certora.
 
-| How the call is modelled | Vulnerable code | Fixed code | Diagnosis |
-|---|---|---|---|
-| `DISPATCHER(true)` (committed) | passes | passes | The call reaches `ModuleSigner`. But a reachability check shows a reverting module can never lead to a queued transaction, which is wrong on a real chain. **The summary hides the bug.** |
-| No summary | violated | violated | The call isn't resolved. It may return anything, including a normal return of the magic value. False alarm. |
-| `unresolved external … DISPATCH […] default NONDET` | violated | violated | Same as no summary. |
-| `unresolved external … DISPATCH(optimistic=true) […]` | violated | violated | A reverting module can queue even on the fixed code, which is impossible. False alarm. |
+## Spec mistakes found along the way
 
-Two problems with the spec were found and fixed along the way:
-1. Declaring `hashTypedData` `envfree` let the rule use a different chain ID from the real call.
-2. A first version of `ModuleSigner` used assembly that the prover modelled imprecisely.
-
-## What this means for the experiment
-
-This is the "model and assumptions" step from the talk. The property is fine, and the prover's solver could in principle compute the attacker's input. But the call that carries the bug has to be modelled, and the summaries we tried either drop revert data or make the result meaningless.
-
-So far, formal verification needs the same knowledge as testing: you have to know that the revert data of that call matters before you can check that the model keeps it.
-
-## Next steps
-
-- Ask Certora, or check their documentation, how summarized low-level calls handle reverts and revert data.
-- Find a way to resolve the `staticcall` to `ModuleSigner` without a summary.
+- Declaring `hashTypedData` `envfree` let the rule use a different chain ID from the real call.
+- A first version of `ModuleSigner` used assembly that the prover modelled imprecisely.

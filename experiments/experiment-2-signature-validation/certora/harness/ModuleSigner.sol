@@ -8,13 +8,16 @@ pragma solidity ^0.8.20;
 /// (for a real wallet: its owners' keys signed them).
 ///
 /// For any other hash, the prover chooses how its validation code answers:
-/// return normally with any value, or revert with any data of up to 32 bytes.
-/// These choices are initial storage, so they are unconstrained. This is the
-/// threat model, not the bug: nothing here singles out a particular revert.
+/// return normally with any value, or revert with any 32 bytes. These choices
+/// are initial storage, so they are unconstrained. This is the threat model,
+/// not the bug: nothing here singles out a particular revert.
 ///
 /// The one constraint comes from the ERC-1271 definition: a normal return of
 /// the magic value IS an approval. So for a hash it did not approve, a normal
 /// return never carries the magic value.
+///
+/// Simplification: revert data is always 32 bytes. With a prover-chosen
+/// length, the prover lost track of the revert data and missed the bug.
 contract ModuleSigner {
     bytes4 internal constant MAGIC = 0x1626ba7e;
 
@@ -24,16 +27,15 @@ contract ModuleSigner {
     bool public answerByRevert;
     bytes4 public returnValue;
     bytes32 public revertWord;
-    uint8 public revertLength;
 
     function isValidSignature(bytes32 hash, bytes calldata) external view returns (bytes4) {
         if (approved[hash]) return MAGIC;
 
         if (answerByRevert) {
-            bytes memory reason = abi.encodePacked(revertWord);
-            uint256 len = revertLength > 32 ? 32 : revertLength;
+            bytes32 word = revertWord;
             assembly {
-                revert(add(reason, 32), len)
+                mstore(0, word)
+                revert(0, 32)
             }
         }
 
