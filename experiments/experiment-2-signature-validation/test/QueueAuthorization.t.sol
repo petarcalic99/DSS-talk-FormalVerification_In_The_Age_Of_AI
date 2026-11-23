@@ -16,6 +16,27 @@ import {
 /// (to, value, data, salt).
 ///
 /// "Rejected" means: the call reverts AND queueNonce does not change.
+///
+/// What this file contains (28 tests, grouped by section headers below):
+///   A. The intended paths work: direct call and signatures from enabled modules queue.
+///   B. Direct path: strangers, the owner and disabled modules cannot queue.
+///   C. Signed path: signatures from non-modules or disabled modules are rejected.
+///   D. A signature covers exactly one (to, value, data, salt), on this timelock and chain.
+///   E. The multisig module counts only a threshold of distinct owners over the right hash.
+///   F. Contract signers that misbehave (revert, wrong value, no return data) are rejected.
+///   G. Fuzz: random signature bytes never queue anything.
+///
+/// Where to look: on the current code, two tests in section F fail. Both use a
+/// signer that REVERTS with the ERC-1271 magic value as its revert data.
+/// SignatureChecker._isValidContractSignature ignores the staticcall success
+/// flag and only reads the returned bytes, so the revert counts as a valid
+/// signature and the transaction is queued with no real approval.
+///   - test_erc1271_revertsWithMagicData_moduleItself_rejected
+///       an enabled module that never signs anything still gets a tx queued.
+///   - test_erc1271_revertsWithMagicData_nestedInMultisig_rejected
+///       the real attack: name the enabled multisig as signer, and put the
+///       reverting contract inside its signature. No owner signed anything.
+/// All other tests pass, on both the current code and the fixed code.
 contract QueueAuthorizationTest is Fixture {
     function setUp() public {
         _deployFixture();
