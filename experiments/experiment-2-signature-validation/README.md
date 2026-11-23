@@ -55,7 +55,7 @@ Neither point requires knowing about the bug.
 **With formal verification, the solver should compute the input instead of guessing it.**
 - A prover typically treats a call to an unknown contract as able to return or revert with any data.
 - Given the property and an unconstrained signer, it should produce revert data starting with `0x1626ba7e`, because that's what reaching the queue requires.
-- *This is a prediction. We haven't run a prover on this experiment yet.*
+- *This is a prediction, and it has not held up so far.* In our first prover runs, every way we modelled the signer call either hid the bug or also failed on the fixed code. See [certora/README.md](certora/README.md).
 
 **What remains for the engineer with formal verification:**
 - **Don't model the attacker away.** Summarising the signer as honest, or as "returns the magic value or reverts empty", to avoid a timeout hides the bug.

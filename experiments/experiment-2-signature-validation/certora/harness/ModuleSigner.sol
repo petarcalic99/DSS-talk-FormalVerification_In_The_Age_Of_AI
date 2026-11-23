@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+/// @title ModuleSigner
+/// @notice Model of an enabled contract module (a smart wallet), for the prover.
+///
+/// `approved` is the ground truth: the hashes this module really approved
+/// (for a real wallet: its owners' keys signed them).
+///
+/// For any other hash, the prover chooses how its validation code answers:
+/// return normally with any value, or revert with any data of up to 32 bytes.
+/// These choices are initial storage, so they are unconstrained. This is the
+/// threat model, not the bug: nothing here singles out a particular revert.
+///
+/// The one constraint comes from the ERC-1271 definition: a normal return of
+/// the magic value IS an approval. So for a hash it did not approve, a normal
+/// return never carries the magic value.
+contract ModuleSigner {
+    bytes4 internal constant MAGIC = 0x1626ba7e;
+
+    mapping(bytes32 => bool) public approved;
+
+    // How the module answers for hashes it did not approve, chosen by the prover.
+    bool public answerByRevert;
+    bytes4 public returnValue;
+    bytes32 public revertWord;
+    uint8 public revertLength;
+
+    function isValidSignature(bytes32 hash, bytes calldata) external view returns (bytes4) {
+        if (approved[hash]) return MAGIC;
+
+        if (answerByRevert) {
+            bytes memory reason = abi.encodePacked(revertWord);
+            uint256 len = revertLength > 32 ? 32 : revertLength;
+            assembly {
+                revert(add(reason, 32), len)
+            }
+        }
+
+        return returnValue == MAGIC ? bytes4(0) : returnValue;
+    }
+}
