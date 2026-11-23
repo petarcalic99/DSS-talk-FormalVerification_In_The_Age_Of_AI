@@ -59,6 +59,22 @@ There were two hypotheses. First, the specification decides what gets detected. 
 - **Where formal verification is strongest:** once a rule is verified, every state satisfies it, which tests can never show. Tracking assets internally can be proved to stop donations from moving the price. A decimals offset only makes the attack more expensive, so there is nothing to prove.
 - **Formal verification did not find more than tests in these runs.**
 
+## Follow-up experiment: how low-level do you need to go?
+
+[Experiment 2](experiments/experiment-2-signature-validation/) asks how technical the engineer writing the properties needs to be. The target is a signature-validation bug: a timelock accepts an ERC-1271 signer whose call *reverts* with the magic value as revert data, because the success flag is ignored.
+
+- **The spec can stay high-level.** "A transaction is queued only if an enabled module approved it" catches the bug. It just needs "approved" to mean the module's keys, not "the signer's contract said yes", and an attacker who can deploy any contract.
+- **Tests and fuzzing need you to know the bug.** The Foundry tests catch it only because one test uses a signer that reverts with the magic value. Fuzzing with random signer behaviour never found it in 25,000 runs, since it has to hit 4 exact bytes.
+- **Formal verification covers this kind of bug more easily, but only with good adversarial modelling.** The prover computed the 4 bytes by itself. But first the call to the signer had to be modelled so that the attack stays possible:
+  - an unconstrained signer contract;
+  - the call routed to it without a summary;
+  - revert data that reaches the caller.
+
+  Each wrong modelling choice either hid the bug or raised false alarms on the fixed code.
+- **The AI didn't build that model on its own.** In this experiment, the AI assistant writing the CVL got there only after repeated challenges from a human, and the key simplification (hard-coding the signer's address) came from the human. It also made spec mistakes that produced a violation that wasn't the bug.
+
+So you don't need to go low-level in the specification, but you do in the model. With tests you must imagine the attack. With formal verification the solver finds it, but only inside a model whose adversarial assumptions someone has deliberately kept open.
+
 ## Takeaways: how the development process should change
 
 The traditional process was to write specifications, implement, then test and verify. With AI, implementation is fast and formal verification is easier to adopt than it looks. The effort should shift to specifications and tests:
