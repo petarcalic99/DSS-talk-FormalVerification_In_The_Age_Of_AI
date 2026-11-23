@@ -6,7 +6,7 @@ import {TimelockModule} from "../../src/TimelockModule.sol";
 import {Multisig} from "../../src/Multisig.sol";
 import {MultisigHandler} from "../../src/MultisigHandler.sol";
 
-/// Setup shared by the unit and invariant tests: a TimelockModule with two
+/// Test setup: a TimelockModule with two
 /// enabled modules, an EOA and a 2-of-3 Multisig with ERC-1271 support.
 ///
 /// The test oracle for "validly signed" is independent of SignatureChecker:
