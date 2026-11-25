@@ -16,8 +16,9 @@ pragma solidity ^0.8.20;
 /// the magic value IS an approval. So for a hash it did not approve, a normal
 /// return never carries the magic value.
 ///
-/// Simplification: revert data is always 32 bytes. With a prover-chosen
-/// length, the prover lost track of the revert data and missed the bug.
+/// Revert data is always 32 bytes, written at memory address 0. An earlier
+/// version reverted from a freshly allocated buffer with a prover-chosen
+/// length; with it the prover missed the bug (see the experiment README).
 contract ModuleSigner {
     bytes4 internal constant MAGIC = 0x1626ba7e;
 

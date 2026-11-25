@@ -20,7 +20,7 @@ Fix: `return success && bytes4(returnData) == EIP1271_MAGIC_VALUE;`
 | Certora, `certora/` rule | violated | verified |
 
 - Run the tests with `forge test`.
-- Run the prover with `certora/munge.sh && certoraRun certora/conf/QueueAuthorization.conf` (needs `CERTORAKEY`).
+- Run the prover with `certoraRun certora/conf/QueueAuthorization.conf` (needs `CERTORAKEY`).
 
 ## What we learned
 
@@ -35,9 +35,9 @@ Fix: `return success && bytes4(returnData) == EIP1271_MAGIC_VALUE;`
 **The prover computed the bytes, once the model was right.**
 - The CVL rule only says that the module never approved. The signer model only says that it may return any non-approval value or revert with any bytes.
 - The prover then found the revert data `0x1626ba7e…` by itself.
-- Getting there took three modelling fixes. Each wrong version either hid the bug or also failed on the fixed code:
-  - **Routing:** hard-code the signer's address, because the prover can't follow an address sliced out of signature bytes. `munge.sh` changes one line, outside the buggy function. Certora's `DISPATCHER` summary hid the bug, and no summary at all gave false alarms.
-  - **Revert length:** use exactly 32 bytes. With a variable length, the prover lost the revert data.
-  - **Function:** a named function, not a `fallback`. Certora doesn't run fallbacks by default.
+- **But a first version of the signer model gave a green result on the vulnerable code.** It reverted from a freshly allocated buffer with a prover-chosen length (`revert(add(reason, 32), len)`). With it, the prover never produced the execution "signer reverts with the magic value and `SignatureChecker` reads it", so the rule held and Certora reported it verified. The sanity check didn't flag it, because it only checks that *some* execution reaches the assertion.
+- Reverting with a fixed 32 bytes made the prover find the attack. An allocated buffer alone (in this setup) and a prover-chosen length alone (in a small test contract) are both modelled correctly. Only the combination failed.
+- **Why is still open:** either our optimistic settings (`optimistic_loop` with `loop_iter: 2`, `optimistic_hashing`) silently dropped the attacking execution, which is documented behaviour, or it's a Certora modelling bug. A run with those settings off will decide.
+- Along the way, the AI assistant twice blamed the wrong cause: first Certora's `DISPATCHER` summary, then the variable length alone. Both were ruled out by isolated runs. The final setup uses `DISPATCHER` on the unmodified source.
 
 **Conclusion:** with tests, the engineer must **imagine the attack**. With formal verification, the solver finds the attack, but the engineer must **build a model that keeps it possible**. Here that meant checking that a failed call's revert data reaches the caller, which is close to knowing the bug.

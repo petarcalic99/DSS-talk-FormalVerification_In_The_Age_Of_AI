@@ -67,11 +67,10 @@ There were two hypotheses. First, the specification decides what gets detected. 
 - **Tests and fuzzing need you to know the bug.** The Foundry tests catch it only because one test uses a signer that reverts with the magic value. Fuzzing with random signer behaviour never found it in 25,000 runs, since it has to hit 4 exact bytes.
 - **Formal verification covers this kind of bug more easily, but only with good adversarial modelling.** The prover computed the 4 bytes by itself. But first the call to the signer had to be modelled so that the attack stays possible:
   - an unconstrained signer contract;
-  - the call routed to it without a summary;
   - revert data that reaches the caller.
 
-  Each wrong modelling choice either hid the bug or raised false alarms on the fixed code.
-- **The AI didn't build that model on its own.** In this experiment, the AI assistant writing the CVL got there only after repeated challenges from a human, and the key simplification (hard-coding the signer's address) came from the human. It also made spec mistakes that produced a violation that wasn't the bug.
+  A first version of the signer model gave a **green result on the vulnerable code**: the prover never produced the attacking execution, and nothing in the output said so. Whether our optimistic prover settings or a Certora modelling bug caused it is still open.
+- **The AI didn't build that model on its own.** In this experiment, the AI assistant writing the CVL got there only after repeated challenges from a human. It made spec mistakes that produced a violation that wasn't the bug, and twice blamed the wrong cause for the green result.
 
 So you don't need to go low-level in the specification, but you do in the model. With tests you must imagine the attack. With formal verification the solver finds it, but only inside a model whose adversarial assumptions someone has deliberately kept open.
 
