@@ -74,6 +74,15 @@ There were two hypotheses. First, the specification decides what gets detected. 
 
 So you don't need to go low-level in the specification, but you do in the model. With tests you must imagine the attack. With formal verification the solver finds it, but only inside a model whose adversarial assumptions someone has deliberately kept open.
 
+## Follow-up: Verity (Lean) instead of Certora
+
+We also tried [Verity](https://github.com/lfglabs-dev/verity) on both experiments ([details and files](experiments/verity/)). Unlike Certora, which runs an automatic solver on the bytecode, Verity turns the Solidity source into a Lean model: properties are theorems, and the proofs are written by a person or an AI and checked by Lean. What we learned:
+
+- **Arithmetic-heavy properties are proved better in Lean.** "Depositing then redeeming never returns more than was deposited" took a few lines, for any state and rate. Certora timed out on it four times at two hours each.
+- **Low-level bugs are out of reach for now.** Verity only imports Solidity constructs it has validated. It rejects experiment 2's `staticcall`, exactly where the bug lives.
+- **The code had to be adapted.** Verity's Solidity importer does not yet model re-entrancy, so a state-changing external call must be a function's last action, and it rejected OpenZeppelin's `SafeERC20`. We proved properties of a model contract with the same vulnerable pricing. Certora also needed the external market modelled, but not the contract rewritten.
+- **The property still decides everything.** The proved property holds even in the vulnerable code, so it does not catch the bug.
+
 ## Takeaways: how the development process should change
 
 The traditional process was to write specifications, implement, then test and verify. With AI, implementation is fast and formal verification is easier to adopt than it looks. The effort should shift to specifications and tests:
