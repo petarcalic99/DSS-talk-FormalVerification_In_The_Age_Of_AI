@@ -8,25 +8,25 @@ axioms, no `sorryAx`):
                             (F0's P9, which timed out 4 x 2 h in Certora).
 Both hold for ANY state, ANY decimals offset and ANY market rate.
 
-They are stated over the share-pricing formulas of `takara/src/WrappedTakaraModel.sol`,
+They are stated over the share-pricing formulas of `wrapper/src/WrapperModel.sol`,
 copied by hand. Not yet done: the bridge theorem proving that the imported contract
 (`Model.lean`) computes these formulas when it does not revert.
 
 These properties hold even in the vulnerable code: they bound what a depositor can GAIN,
 while the donation bug makes victims get LESS. They do not detect the bug.
 
-Run inside the Verity checkout with `lake env lean TakaraImport/RoundTrip.lean`.
+Run inside the Verity checkout with `lake env lean lean/RoundTrip.lean`.
 -/
 import Mathlib.Tactic
 
-namespace Takara.Spec
+namespace Wrapper.Spec
 
 /-- Wrapper state at the tToken level. -/
 structure State where
   S : Nat  -- share supply (`totalSupply`)
   V : Nat  -- wrapper's tToken balance (`totalVaultShares()`)
 
-/-- shares = floor(t * (S + 10^k) / (V + 1)), as `previewWrap` in WrappedTakaraModel.sol -/
+/-- shares = floor(t * (S + 10^k) / (V + 1)), as `previewWrap` in WrapperModel.sol -/
 def previewWrap (k : Nat) (st : State) (t : Nat) : Nat :=
   t * (st.S + 10 ^ k) / (st.V + 1)
 
@@ -60,7 +60,7 @@ theorem wrap_unwrap_no_gain (k : Nat) (st : State) (t : Nat) :
   nlinarith [hwrap]
 
 /-- Deposit `a` assets then redeem the shares, at market rate `r` (1e18-scaled), as in
-`deposit` / `redeem` of WrappedTakaraModel.sol:
+`deposit` / `redeem` of WrapperModel.sol:
   the market mints m = floor(a * 1e18 / r) tTokens, and shares are priced on m (`previewDeposit`);
   redeem pays tt = previewUnwrap(shares) tTokens, which the market turns into floor(tt * r / 1e18). -/
 def depositRedeem (k r : Nat) (st : State) (a : Nat) : Nat :=
@@ -88,6 +88,6 @@ theorem deposit_redeem_no_gain (k r : Nat) (st : State) (a : Nat) :
       apply Nat.div_le_of_le_mul                 -- remove the division
       linarith [hmint]
 
-end Takara.Spec
-#print axioms Takara.Spec.wrap_unwrap_no_gain
-#print axioms Takara.Spec.deposit_redeem_no_gain
+end Wrapper.Spec
+#print axioms Wrapper.Spec.wrap_unwrap_no_gain
+#print axioms Wrapper.Spec.deposit_redeem_no_gain

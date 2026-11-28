@@ -2,7 +2,7 @@
 Experiment 2 in Verity: import attempt (expected to FAIL).
 
 Expects experiment 2's sources copied into the Verity checkout as `exp2/src/`
-(see ../README.md). Run with `lake env lean TakaraImport/Exp2Import.lean`.
+(see ../README.md). Run with `lake env lean lean/Exp2Import.lean`.
 
 Observed result (Verity a10dcd4, solc 0.8.34):
   src/SignatureChecker.sol:60:13: MemberAccess: [solidity-import:unsupported]

@@ -22,18 +22,18 @@ Everything ran in one cloud container (4 cores):
 - Verity at commit `a10dcd4` (26 Nov 2026), Lean 4.31.0, the prebuilt Mathlib cache, and the importer's pinned `solc` 0.8.34.
 - Building the importer and its dependencies took about 15 minutes. Afterwards, an import takes seconds and checking the proofs takes a few seconds.
 
-To reproduce, copy this folder's `takara/` and `TakaraImport/` into a Verity checkout at that commit (for experiment 2, also copy `../experiment-2-signature-validation/src` to `exp2/src`), then:
+To reproduce, copy this folder's `wrapper/` and `lean/` into a Verity checkout at that commit (for experiment 2, also copy `../experiment-2-signature-validation/src` to `exp2/src`), then:
 
 ```bash
 python3 scripts/setup_solc_import.py --version 0.8.34
 lake exe cache get
 lake build Compiler.SolidityImport.Import
-lake env lean TakaraImport/RoundTrip.lean
+lake env lean lean/RoundTrip.lean
 ```
 
 ## Experiment 2: not importable
 
-[`TakaraImport/Exp2Import.lean`](TakaraImport/Exp2Import.lean) fails at `SignatureChecker.sol:60`, the `signer.staticcall(...)` that returns `(bool, bytes memory)`:
+[`lean/Exp2Import.lean`](lean/Exp2Import.lean) fails at `SignatureChecker.sol:60`, the `signer.staticcall(...)` that returns `(bool, bytes memory)`:
 
 ```
 external contract calls are outside this slice
@@ -47,7 +47,7 @@ The `STATICCALL` opcode itself is modelled. What is missing is the Solidity stat
 
 ### Import of the original contract
 
-`SimplifiedWrappedTakara.sol` with OpenZeppelin 5.4.0. We removed one blocker at a time:
+The experiment 1 wrapper ([`../inflation-vulnerability/contracts/`](../inflation-vulnerability/contracts/)) with OpenZeppelin 5.4.0. We removed one blocker at a time:
 
 | Step | Change | Result | Cause |
 |---|---|---|---|
@@ -63,14 +63,14 @@ Using the return value of a state-changing call (`require(tToken.mint(assets) ==
 
 ### Model contract
 
-[`takara/src/WrappedTakaraModel.sol`](takara/src/WrappedTakaraModel.sol) keeps the vulnerable pricing exactly (shares priced from the raw tToken balance, so a donation moves the price) and simplifies the plumbing:
+[`wrapper/src/WrapperModel.sol`](wrapper/src/WrapperModel.sol) keeps the vulnerable pricing exactly (shares priced from the raw tToken balance, so a donation moves the price) and simplifies the plumbing:
 
 - the tToken ledger, the asset ledger and the market are internal, so there are no external calls;
 - `Math.mulDiv` becomes plain checked arithmetic (it differs only above 2^256);
 - the market rate is fixed (the simplified contract accrues no interest), with Compound's floor rounding on mint and redeem;
 - `donate(t)` is an explicit function; the offset is a deployment parameter (`virtualShares = 10^k`).
 
-All ten functions import ([`TakaraImport/Model.lean`](TakaraImport/Model.lean)). It is the same kind of simplification as Certora's `TTokenMock`, and it is a model for proving properties, not the audited code.
+All ten functions import ([`lean/Model.lean`](lean/Model.lean)). It is the same kind of simplification as Certora's `TTokenMock`, and it is a model for proving properties, not the audited code.
 
 ## Properties
 
@@ -85,7 +85,7 @@ We chose properties where Certora struggled in experiment 1:
 
 ### Property 4, proved
 
-[`TakaraImport/RoundTrip.lean`](TakaraImport/RoundTrip.lean) holds two theorems:
+[`lean/RoundTrip.lean`](lean/RoundTrip.lean) holds two theorems:
 
 - `wrap_unwrap_no_gain`: wrap then unwrap never returns more tTokens than wrapped.
 - `deposit_redeem_no_gain`: deposit then redeem never returns more assets than deposited, including the market's two roundings.
@@ -94,7 +94,7 @@ Both hold for any state, any offset and any rate. `#print axioms` lists only Lea
 
 Two caveats:
 
-- **Not like for like.** F0's `P9` ran on the real Takara market with interest; ours is over the model's formulas with a fixed rate.
+- **Not like for like.** F0's `P9` ran on the real lending market code with interest; ours is over the model's formulas with a fixed rate.
 - **It does not detect the bug.** Property 4 bounds what a depositor can gain. The donation bug makes victims get less, down to zero, which still satisfies it. Properties 1 to 3 are the ones about the bug.
 
 ## What we concluded

@@ -1,7 +1,7 @@
 /-
-Experiment 1 in Verity: import of the model contract `takara/src/WrappedTakaraModel.sol`.
+Experiment 1 in Verity: import of the model contract `wrapper/src/WrapperModel.sol`.
 
-Run inside the Verity checkout with `lake env lean TakaraImport/Model.lean`.
+Run inside the Verity checkout with `lake env lean lean/Model.lean`.
 All ten functions import (`importable denoteCovered true`); the `#eval` prints Verity's report.
 
 This file only translates the contract into a Verity `CompilationModel`. The theorems in
@@ -10,10 +10,10 @@ links them to this imported model is not written yet.
 -/
 import Compiler.SolidityImport.Import
 
-namespace Takara.Model
-solidity_import imported from "takara" entry "src/WrappedTakaraModel.sol"
+namespace Wrapper.Model
+solidity_import imported from "wrapper" entry "src/WrapperModel.sol"
   using { evmVersion := "osaka", viaIR := false, optimizerRuns := some 200, bytecodeHash := "none" }
-  contract WrappedTakaraModel
+  contract WrapperModel
   function totalVaultShares()
   function previewWrap(uint256)
   function previewUnwrap(uint256)
@@ -24,6 +24,6 @@ solidity_import imported from "takara" entry "src/WrappedTakaraModel.sol"
   function donate(uint256)
   function deposit(uint256)
   function redeem(uint256)
-end Takara.Model
+end Wrapper.Model
 
-#eval IO.println Takara.Model.imported.report.toText
+#eval IO.println Wrapper.Model.imported.report.toText

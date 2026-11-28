@@ -4,7 +4,8 @@ pragma solidity ^0.8.20;
 /*
  * MODEL CONTRACT FOR LEAN PROOFS, NOT THE AUDITED CODE.
  *
- * Same vulnerable pricing as SimplifiedWrappedTakara.sol: shares are priced from the
+ * Same vulnerable pricing as the experiment 1 wrapper
+ * (../inflation-vulnerability/contracts/): shares are priced from the
  * wrapper's RAW tToken balance, so a direct transfer ("donation") moves the price.
  *
  * Simplified so that Verity's Solidity importer accepts every function:
@@ -17,7 +18,7 @@ pragma solidity ^0.8.20;
  *     mint rounds floor(a * 1e18 / rate) and redeem floor(t * rate / 1e18), as Compound does.
  *   - Callers act for themselves (no receiver argument).
  */
-contract WrappedTakaraModel {
+contract WrapperModel {
     uint256 public constant SCALE = 1e18;
 
     /// 10 ** decimalsOffset: 1 in the vulnerable code, 1e6 with OpenZeppelin's mitigation.
