@@ -74,6 +74,30 @@ There were two hypotheses. First, the specification decides what gets detected. 
 
 So you don't need to go low-level in the specification, but you do in the model. With tests you must imagine the attack. With formal verification the solver finds it, but only inside a model whose adversarial assumptions someone has deliberately kept open.
 
+## Follow-up: Verity (Lean) instead of Certora
+
+We then tried [Verity](https://github.com/lfglabs-dev/verity) on both experiments ([details and files](experiments/verity/)). Verity works differently from Certora:
+
+- **Certora** compiles the contract and an automatic SMT solver searches the bytecode. Any Solidity works, and the answer is a proof, a counterexample or a timeout.
+- **Verity** turns the Solidity source into a Lean model. Properties are Lean theorems, and the proofs are written by a person or an AI and checked by Lean's kernel. There are no timeouts and no counterexamples. Its importer accepts a Solidity construct only after testing that its translation matches what `solc` produces, and rejects everything else.
+
+**Walkthrough:**
+
+1. **Setup.** Verity, Lean, the prebuilt Mathlib library and the pinned `solc` were built locally in about 15 minutes. Proofs are checked on the same machine in seconds; nothing runs on a remote service.
+2. **Experiment 2 cannot be imported.** The importer rejects `signer.staticcall(...)` in `SignatureChecker`, which is exactly where the bug lives. Verity models the `STATICCALL` opcode, but not the Solidity statement whose raw result (success flag and returned bytes) the code may use freely. The forms it accepts either check the success flag themselves, which removes the bug, or move the call into assembly.
+3. **Experiment 1: the original wrapper does not import fully.** The pricing functions import, including OpenZeppelin's `mulDiv`. The state-changing functions hit two Verity limits:
+   - OpenZeppelin's `SafeERC20` reads the token's answer from memory it never wrote, which Verity does not model. Plain `transfer` calls fix it.
+   - **Re-entrancy:** a state-changing external call must be a function's last action, because the callee could call back into the contract and the importer does not model that yet. Reordering fixed `wrap`, but `deposit` and `redeem` make several external calls each.
+4. **A model contract.** We moved the tToken ledger and the market inside the contract, keeping the vulnerable pricing unchanged. All functions import.
+5. **One property proved.** "Depositing then redeeming never returns more than was deposited" is proved for any state, any decimals offset and any rate, in a few lines. In Certora, F0's version of it timed out four times at two hours each.
+
+**Conclusions:**
+
+- **Some properties are proved better with Lean.** Arithmetic with chained rounding, statements for any number of victims, and restricting to reachable states are natural in Lean and caused timeouts or misleading counterexamples in Certora.
+- **Some, like experiment 2, are not possible yet.** Bugs in low-level byte handling sit exactly in the constructs Verity's importer rejects. Certora handles them as written.
+- **Verity forced code changes; Certora needed models.** Both tools needed the external market modelled: F2 used a `TTokenMock`, and F0's `DISPATCHER` summaries route calls to known code, which in practice assumes no unexpected re-entry. But only Verity required rewriting the contract itself (no `SafeERC20`, calls reordered, the market moved inside), so the proofs are about a model contract, not the original.
+- **The property still decides everything.** The proved property holds even in the vulnerable code: it bounds what a depositor can gain, while the bug makes victims get less. The properties that catch the bug (exact attacker profit, fair deposit over reachable states) are the next step and are not proved yet.
+
 ## Takeaways: how the development process should change
 
 The traditional process was to write specifications, implement, then test and verify. With AI, implementation is fast and formal verification is easier to adopt than it looks. The effort should shift to specifications and tests:
